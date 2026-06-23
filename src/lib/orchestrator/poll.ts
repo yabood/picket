@@ -23,7 +23,9 @@ import {
 } from './persist';
 
 const GATE_CONCURRENCY = 5;
-const MAX_ITEM_AGE_MS = 48 * 60 * 60 * 1000;
+// 30 days — wide enough to backfill recent history on a cold start. Re-runs
+// stay idempotent (dedupe key), so a seen item is never re-gated or re-posted.
+const MAX_ITEM_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_HYDRATED_BODY = 16_000;
 
 interface PollDeps {
