@@ -24,9 +24,46 @@ function parsePage(input: string | undefined): number {
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
-function fmtTime(d: Date | null): string {
+/** Exact, unambiguous timestamp (UTC) — used as the hover title. */
+function fmtAbsolute(d: Date): string {
+  return (
+    new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'UTC',
+    }).format(d) + ' UTC'
+  );
+}
+
+/**
+ * Friendly, at-a-glance time. Relative ("12 mins ago") for the last week,
+ * falling back to a readable absolute date for older items. `now` is passed in
+ * so every row on a render shares one reference point.
+ */
+function fmtWhen(d: Date | null, now: number): string {
   if (!d) return '—';
-  return d.toISOString().replace('T', ' ').slice(0, 19) + 'Z';
+  const diff = now - d.getTime();
+  const min = 60_000;
+  const hour = 60 * min;
+  const day = 24 * hour;
+  if (diff < min) return 'just now';
+  if (diff < hour) {
+    const n = Math.floor(diff / min);
+    return `${n} min${n === 1 ? '' : 's'} ago`;
+  }
+  if (diff < day) {
+    const n = Math.floor(diff / hour);
+    return `${n} hour${n === 1 ? '' : 's'} ago`;
+  }
+  if (diff < 7 * day) {
+    const n = Math.floor(diff / day);
+    return n === 1 ? 'yesterday' : `${n} days ago`;
+  }
+  return fmtAbsolute(d);
 }
 
 function fmtDuration(start: Date | null, end: Date | null): string {
@@ -70,6 +107,7 @@ export default async function HomePage({
 
   const { mandateCounts, lastRuns } = snapshot;
   const totalPages = Math.max(1, Math.ceil(mandatesPage.total / PAGE_SIZE));
+  const now = Date.now();
 
   return (
     <main
@@ -81,7 +119,7 @@ export default async function HomePage({
         lineHeight: 1.45,
       }}
     >
-      <h1 style={{ marginBottom: 4 }}>📋 Picket</h1>
+      <h1 style={{ marginBottom: 4 }}>Picket</h1>
       <p style={{ opacity: 0.7, marginTop: 0 }}>
         Regulatory-mandate intelligence — {mandateCounts.total} tracked ·{' '}
         <span style={{ color: statusColor('posted') }}>{mandateCounts.posted} posted</span> ·{' '}
@@ -108,7 +146,9 @@ export default async function HomePage({
           <tbody>
             {lastRuns.map((r: Run) => (
               <tr key={r.id}>
-                <td style={TD}>{fmtTime(r.startedAt)}</td>
+                <td style={TD} title={r.startedAt ? fmtAbsolute(r.startedAt) : undefined}>
+                  {fmtWhen(r.startedAt, now)}
+                </td>
                 <td style={TD}>{fmtDuration(r.startedAt, r.finishedAt)}</td>
                 <td style={TD}>{r.fetched}</td>
                 <td style={TD}>{r.deduped}</td>
@@ -206,7 +246,9 @@ export default async function HomePage({
                     )}
                   </td>
                   <td style={TD}>{g ? g.confidence.toFixed(2) : '—'}</td>
-                  <td style={TD}>{fmtTime(row.createdAt)}</td>
+                  <td style={TD} title={row.createdAt ? fmtAbsolute(row.createdAt) : undefined}>
+                    {fmtWhen(row.createdAt, now)}
+                  </td>
                 </tr>
               );
             })}
