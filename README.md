@@ -60,10 +60,10 @@ Each behind a common `Source` interface — adding one is a single file.
 | Source | What it catches | Strategy | Fetch |
 |---|---|---|---|
 | **CISA directives** | Binding/Emergency Operational Directives (the BOD 26-04 case) | `cisa.gov/news-events/directives` is an HTML index with no feed → list directive links, diff against seen, scrape each | `fetch` + readability |
-| **CISA alerts/advisories** | broader CISA output | RSS | `rss-parser` |
-| **SEC rulemaking** | cyber disclosure & related rules — *not* 8-K victim filings | SEC press-release / proposed-&-final-rules RSS + rule pages | `rss-parser` + `fetch` |
-| **EU — EUR-Lex / ESAs (DORA)** | DORA RTS/ITS & technical standards from EBA/ESMA/EIOPA | EUR-Lex (HTML + PDF) and ESA publication pages | `fetch` + readability / `unpdf` |
-| **ECB** | banking-supervision press & guidance | RSS | `rss-parser` |
+| **CISA news** | policy/program announcements (incl. new directives) | `cisa.gov/news.xml` — the low-volume news feed, **not** the 300KB per-CVE advisories feed | `rss-parser` |
+| **SEC rulemaking** | cyber disclosure & related rules — *not* 8-K victim filings | proposed-rules RSS + press-releases RSS (SEC exposes **no** final-rules feed; adoptions land in press releases) | `rss-parser` |
+| **EU — ESAs (DORA)** | DORA RTS/ITS & technical standards | EBA + ESMA RSS (EIOPA has no working feed); gate-passers are hydrated via `fetch`+readability / `unpdf` for fuller text | `rss-parser` (+ hydrate) |
+| **ECB** | banking-supervision press & guidance | `bankingsupervision.europa.eu/rss/press.xml` | `rss-parser` |
 
 **Deferred to a later phase:** state-level — no single regulator and no single feed, so it gets its own approach. See [Appendix — State-level tier](#appendix--state-level-tier-future-phase).
 

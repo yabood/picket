@@ -1,0 +1,43 @@
+{
+  "name": "picket",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3019",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs migrate",
+    "db:studio": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs studio",
+    "smoke:sources": "tsx --env-file=.env.local scripts/smoke-sources.ts",
+    "smoke:gate": "tsx --env-file=.env.local scripts/smoke-gate.ts",
+    "smoke:extract": "tsx --env-file=.env.local scripts/smoke-extract.ts",
+    "smoke:pipeline": "tsx --env-file=.env.local scripts/smoke-pipeline.ts",
+    "smoke:slack": "tsx --env-file=.env.local scripts/smoke-slack.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/gateway": "^3.0.121",
+    "@mozilla/readability": "^0.6.0",
+    "@neondatabase/serverless": "^1.1.0",
+    "ai": "^6.0.193",
+    "drizzle-orm": "^0.45.2",
+    "linkedom": "^0.18.12",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "rss-parser": "^3.13.0",
+    "unpdf": "^1.6.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vercel/config": "^0.5.1",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.22.3",
+    "typescript": "^5.7.0"
+  }
+}
