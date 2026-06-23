@@ -56,30 +56,65 @@ export async function getMandatesPage(
   };
 }
 
-export async function getStatusSnapshot(): Promise<{
-  lastRuns: Run[];
-  mandateCounts: { total: number; posted: number; rejected: number; pending: number };
-}> {
-  const [lastRuns, counts] = await Promise.all([
-    getRecentRuns(5),
+export interface RunsPage {
+  rows: Run[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export async function getRunsPage(
+  opts: { page?: number; pageSize?: number } = {},
+): Promise<RunsPage> {
+  const page = Math.max(1, opts.page ?? 1);
+  const pageSize = Math.min(200, Math.max(1, opts.pageSize ?? 5));
+
+  const [rows, totalResult] = await Promise.all([
     db
-      .select({
-        total: sql<number>`count(*)::int`,
-        posted: sql<number>`count(*) filter (where ${mandates.postedAt} is not null)::int`,
-        rejected: sql<number>`count(*) filter (where ${mandates.rejectedReason} is not null)::int`,
-        pending: sql<number>`count(*) filter (where ${mandates.postedAt} is null and ${mandates.rejectedReason} is null)::int`,
-      })
-      .from(mandates),
+      .select()
+      .from(runs)
+      .orderBy(desc(runs.startedAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize),
+    db.select({ n: sql<number>`count(*)::int` }).from(runs),
   ]);
+
+  return { rows, total: Number(totalResult[0]?.n ?? 0), page, pageSize };
+}
+
+export interface MandateCounts {
+  total: number;
+  posted: number;
+  rejected: number;
+  pending: number;
+}
+
+export async function getMandateCounts(): Promise<MandateCounts> {
+  const counts = await db
+    .select({
+      total: sql<number>`count(*)::int`,
+      posted: sql<number>`count(*) filter (where ${mandates.postedAt} is not null)::int`,
+      rejected: sql<number>`count(*) filter (where ${mandates.rejectedReason} is not null)::int`,
+      pending: sql<number>`count(*) filter (where ${mandates.postedAt} is null and ${mandates.rejectedReason} is null)::int`,
+    })
+    .from(mandates);
 
   const c = counts[0] ?? { total: 0, posted: 0, rejected: 0, pending: 0 };
   return {
-    lastRuns,
-    mandateCounts: {
-      total: Number(c.total),
-      posted: Number(c.posted),
-      rejected: Number(c.rejected),
-      pending: Number(c.pending),
-    },
+    total: Number(c.total),
+    posted: Number(c.posted),
+    rejected: Number(c.rejected),
+    pending: Number(c.pending),
   };
+}
+
+export async function getStatusSnapshot(): Promise<{
+  lastRuns: Run[];
+  mandateCounts: MandateCounts;
+}> {
+  const [lastRuns, mandateCounts] = await Promise.all([
+    getRecentRuns(5),
+    getMandateCounts(),
+  ]);
+  return { lastRuns, mandateCounts };
 }

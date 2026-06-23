@@ -1,8 +1,9 @@
 import type { Brief } from '@/lib/extract';
 import type { Gate } from '@/lib/gate';
 import {
+  getMandateCounts,
   getMandatesPage,
-  getStatusSnapshot,
+  getRunsPage,
   type MandateStatus,
 } from '@/lib/admin/queries';
 import type { Mandate, Run } from '@/lib/db/schema';
@@ -11,7 +12,8 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const STATUS_TABS: MandateStatus[] = ['all', 'posted', 'rejected', 'pending'];
-const PAGE_SIZE = 50;
+const MANDATES_PAGE_SIZE = 100;
+const RUNS_PAGE_SIZE = 5;
 
 function parseStatus(input: string | undefined): MandateStatus {
   return (STATUS_TABS as string[]).includes(input ?? '')
@@ -94,20 +96,37 @@ const TD: React.CSSProperties = {
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; page?: string; rp?: string }>;
 }) {
   const params = await searchParams;
   const status = parseStatus(params.status);
   const page = parsePage(params.page);
+  const runsPageNum = parsePage(params.rp);
 
-  const [snapshot, mandatesPage] = await Promise.all([
-    getStatusSnapshot(),
-    getMandatesPage({ page, pageSize: PAGE_SIZE, status }),
+  const [mandateCounts, runsPage, mandatesPage] = await Promise.all([
+    getMandateCounts(),
+    getRunsPage({ page: runsPageNum, pageSize: RUNS_PAGE_SIZE }),
+    getMandatesPage({ page, pageSize: MANDATES_PAGE_SIZE, status }),
   ]);
 
-  const { mandateCounts, lastRuns } = snapshot;
-  const totalPages = Math.max(1, Math.ceil(mandatesPage.total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(mandatesPage.total / MANDATES_PAGE_SIZE));
+  const runsTotalPages = Math.max(1, Math.ceil(runsPage.total / RUNS_PAGE_SIZE));
   const now = Date.now();
+
+  // Build a URL that preserves the other controls' state. `page` is the
+  // mandates page, `rp` the recent-runs page; both are omitted when 1 (and
+  // status when 'all') to keep URLs clean.
+  const hrefWith = (next: { status?: MandateStatus; page?: number; rp?: number }) => {
+    const s = next.status ?? status;
+    const p = next.page ?? page;
+    const r = next.rp ?? runsPageNum;
+    const sp = new URLSearchParams();
+    if (s !== 'all') sp.set('status', s);
+    if (p > 1) sp.set('page', String(p));
+    if (r > 1) sp.set('rp', String(r));
+    const qs = sp.toString();
+    return qs ? `/?${qs}` : '/';
+  };
 
   return (
     <main
@@ -144,7 +163,7 @@ export default async function HomePage({
             </tr>
           </thead>
           <tbody>
-            {lastRuns.map((r: Run) => (
+            {runsPage.rows.map((r: Run) => (
               <tr key={r.id}>
                 <td style={TD} title={r.startedAt ? fmtAbsolute(r.startedAt) : undefined}>
                   {fmtWhen(r.startedAt, now)}
@@ -161,7 +180,7 @@ export default async function HomePage({
                 </td>
               </tr>
             ))}
-            {lastRuns.length === 0 && (
+            {runsPage.rows.length === 0 && (
               <tr>
                 <td style={TD} colSpan={9}>
                   No runs yet.
@@ -172,12 +191,20 @@ export default async function HomePage({
         </table>
       </div>
 
+      <div style={{ display: 'flex', gap: 12, marginTop: 10, fontSize: 13, alignItems: 'center' }}>
+        {runsPageNum > 1 && <a href={hrefWith({ rp: runsPageNum - 1 })}>← Prev</a>}
+        <span style={{ opacity: 0.7 }}>
+          Page {runsPageNum} of {runsTotalPages} · {runsPage.total} total
+        </span>
+        {runsPageNum < runsTotalPages && <a href={hrefWith({ rp: runsPageNum + 1 })}>Next →</a>}
+      </div>
+
       <h2 style={{ fontSize: 16, marginTop: 28 }}>Mandates</h2>
       <nav style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         {STATUS_TABS.map((t) => (
           <a
             key={t}
-            href={`/?status=${t}`}
+            href={hrefWith({ status: t, page: 1 })}
             style={{
               padding: '3px 10px',
               borderRadius: 6,
@@ -264,11 +291,11 @@ export default async function HomePage({
       </div>
 
       <div style={{ display: 'flex', gap: 12, marginTop: 12, fontSize: 13, alignItems: 'center' }}>
-        {page > 1 && <a href={`/?status=${status}&page=${page - 1}`}>← Prev</a>}
+        {page > 1 && <a href={hrefWith({ page: page - 1 })}>← Prev</a>}
         <span style={{ opacity: 0.7 }}>
           Page {page} of {totalPages} · {mandatesPage.total} total
         </span>
-        {page < totalPages && <a href={`/?status=${status}&page=${page + 1}`}>Next →</a>}
+        {page < totalPages && <a href={hrefWith({ page: page + 1 })}>Next →</a>}
       </div>
     </main>
   );
