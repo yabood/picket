@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Picket logo">
+  <rect width="512" height="512" rx="116" fill="#0E1B2C"/>
+  <g fill="#9CB3CC">
+    <path d="M86 392 V206 L108 174 L130 206 V392 Z"/>
+    <path d="M160 392 V206 L182 174 L204 206 V392 Z"/>
+    <path d="M234 392 V206 L256 174 L278 206 V392 Z"/>
+    <path d="M382 392 V206 L404 174 L426 206 V392 Z"/>
+  </g>
+  <path d="M308 392 V150 L330 118 L352 150 V392 Z" fill="#F2A93B"/>
+</svg>
